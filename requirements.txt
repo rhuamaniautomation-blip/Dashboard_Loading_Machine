@@ -1,0 +1,30 @@
+# ==============================================================================
+# REQUIREMENTS - Dashboard Performance de Línea v3.0.0
+# Sistema de Manufactura Inteligente
+# ==============================================================================
+
+# Framework principal
+streamlit>=1.32.0
+
+# Manipulación de datos
+pandas>=2.0.0
+numpy>=1.24.0
+
+# Visualización interactiva
+plotly>=5.18.0
+
+# Lectura de archivos Excel
+openpyxl>=3.1.0
+
+# Peticiones HTTP para descarga desde URLs
+requests>=2.31.0
+
+# Utilidades de fecha y tiempo
+python-dateutil>=2.8.0
+
+# ==============================================================================
+# NOTAS DE INSTALACIÓN
+# ==============================================================================
+# Instalar con: pip install -r requirements.txt
+# O en Streamlit Cloud, estas dependencias se instalan automáticamente
+# ==============================================================================
