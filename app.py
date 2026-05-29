@@ -6,7 +6,7 @@ Aplicación institucional para análisis de paradas, disponibilidad, MTBF y MTTR
 Compatible con archivos Excel estándar desde SharePoint o carga local.
 
 Desarrollado por: CAVA Especialistas en Robotica y Automatizacion - Roger Huamani
-Versión: 3.1.0
+Versión: 3.2.0
 Fecha: 2026
 ================================================================================
 """
@@ -36,7 +36,9 @@ import math
 # Suprimir warnings para presentación limpia
 warnings.filterwarnings('ignore')
 
-# Configuración de página - DEBE SER LA PRIMERA LLAMADA A STREAMLIT
+# ==============================================================================
+# CONFIGURACIÓN DE PÁGINA - DEBE SER LA PRIMERA LLAMADA A STREAMLIT
+# ==============================================================================
 st.set_page_config(
     page_title="Dashboard Performance de Línea | CAVA",
     page_icon="🏭",
@@ -45,7 +47,7 @@ st.set_page_config(
     menu_items={
         'Get Help': None,
         'Report a bug': None,
-        'About': "Dashboard Performance de Línea v3.1.0 - Desarrollado por CAVA Especialistas en Robotica y Automatizacion - Roger Huamani"
+        'About': "Dashboard Performance de Línea v3.2.0 - Desarrollado por CAVA Especialistas en Robotica y Automatizacion - Roger Huamani"
     }
 )
 
@@ -62,12 +64,33 @@ st.markdown("""
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
 
     html, body, [class*="css"] {
-        font-family: 'Inter', sans-serif;
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        font-size: 16px;
     }
 
     /* Fondo general */
     .stApp {
         background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+    }
+
+    /* ================================================================ */
+    /* MARCA DE AGUA INSTITUCIONAL                                       */
+    /* ================================================================ */
+    body::before {
+        content: "CAVA ESPECIALISTAS EN ROBOTICA Y AUTOMATIZACION\aROGER HUAMANI - DASHBOARD v3.2.0";
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%) rotate(-25deg);
+        font-size: 2.8rem;
+        color: rgba(15, 76, 129, 0.035);
+        z-index: 9999;
+        pointer-events: none;
+        font-weight: 800;
+        white-space: pre;
+        text-align: center;
+        line-height: 1.4;
+        letter-spacing: 2px;
     }
 
     /* ================================================================ */
@@ -450,13 +473,13 @@ COLUMNAS_ESPERADAS = {
     'fecha': ['FECHA', 'Fecha', 'fecha', 'DATE', 'Date', 'FCH', 'DIA'],
     'turno': ['TURNO', 'Turno', 'turno', 'SHIFT', 'Shift'],
     'aviso': ['AVISO', 'Aviso', 'aviso', 'NOTICE', 'ID', 'CODIGO'],
-    'tiempo': ['TIEMPO (Minutos)', 'TIEMPO', 'Tiempo', 'tiempo', 'TIME', 'Time', 
+    'tiempo': ['TIEMPO (Minutos)', 'TIEMPO', 'Tiempo', 'tiempo', 'TIME', 'Time',
                'DURACION', 'Duracion', 'MINUTOS', 'Minutos', 'minutos'],
     'maquina': ['MAQUINA', 'Maquina', 'maquina', 'MACHINE', 'Machine', 'EQUIPO', 'Equipo'],
     'estacion': ['ESTACIÓN', 'ESTACION', 'Estacion', 'estacion', 'STATION', 'Station', 'AREA', 'Area'],
     'sistema': ['SISTEMA', 'Sistema', 'sistema', 'SYSTEM', 'System'],
     'parte': ['PARTE', 'Parte', 'parte', 'PART', 'Part', 'COMPONENTE', 'Componente'],
-    'causa': ['CAUSA DE AVERÍA', 'CAUSA DE AVERIA', 'Causa de averia', 'causa', 
+    'causa': ['CAUSA DE AVERÍA', 'CAUSA DE AVERIA', 'Causa de averia', 'causa',
               'CAUSA', 'Causa', 'CAUSE', 'Cause', 'MODO FALLA', 'Modo Falla'],
     'problema': ['DESCRIPCIÓN DEL PROBLEMA', 'DESCRIPCION DEL PROBLEMA', 'Descripcion del problema',
                  'problema', 'PROBLEMA', 'Problema', 'FALLA', 'Falla', 'DESCRIPCION'],
@@ -470,11 +493,11 @@ COLORES_INSTITUCIONALES = {
     'acento': '#f59e0b',
     'exito': '#16a34a',
     'peligro': '#dc2626',
-    'advertencia': '#f59e0b',
+    'advertencia': '#d97706',
     'info': '#2563eb',
     'morado': '#7c3aed',
     'gris': '#64748b',
-    'paleta': ['#0f4c81', '#f59e0b', '#16a34a', '#dc2626', '#7c3aed', 
+    'paleta': ['#0f4c81', '#f59e0b', '#16a34a', '#dc2626', '#7c3aed',
                '#2563eb', '#f97316', '#0891b2', '#475569', '#db2777']
 }
 
@@ -486,6 +509,42 @@ MESES_ES = {
 
 DIAS_ES = {0: 'Lunes', 1: 'Martes', 2: 'Miércoles', 3: 'Jueves',
            4: 'Viernes', 5: 'Sábado', 6: 'Domingo'}
+
+
+# ==============================================================================
+# CONFIGURACIÓN PERSISTENTE MEDIANTE QUERY PARAMS
+# ==============================================================================
+def init_config():
+    """Inicializa configuración desde query params (URL) o valores por defecto."""
+    qp = st.query_params
+    config = {
+        'minutos_turno': int(qp.get('mt', 480)),
+        'turnos_dia': int(qp.get('td', 2)),
+        'gauge_max_mtbf': float(qp.get('gmm', 12)),
+        'gauge_max_mttr': float(qp.get('gmtrm', 5)),
+        'umbral_disp_green': float(qp.get('udg', 95)),
+        'umbral_disp_yellow': float(qp.get('udy', 85)),
+        'umbral_mtbf_green': float(qp.get('umg', 8)),
+        'umbral_mtbf_yellow': float(qp.get('umy', 4)),
+        'umbral_mttr_green': float(qp.get('utg', 1)),
+        'umbral_mttr_yellow': float(qp.get('uty', 3)),
+    }
+    return config
+
+
+def save_config_to_url(config):
+    """Guarda la configuración actual en los query params de la URL."""
+    qp = st.query_params
+    qp['mt'] = str(int(config['minutos_turno']))
+    qp['td'] = str(int(config['turnos_dia']))
+    qp['gmm'] = str(float(config['gauge_max_mtbf']))
+    qp['gmtrm'] = str(float(config['gauge_max_mttr']))
+    qp['udg'] = str(float(config['umbral_disp_green']))
+    qp['udy'] = str(float(config['umbral_disp_yellow']))
+    qp['umg'] = str(float(config['umbral_mtbf_green']))
+    qp['umy'] = str(float(config['umbral_mtbf_yellow']))
+    qp['utg'] = str(float(config['umbral_mttr_green']))
+    qp['uty'] = str(float(config['umbral_mttr_yellow']))
 
 
 # ==============================================================================
@@ -608,27 +667,48 @@ def limpiar_dataframe(df, columnas_map):
 def descargar_desde_url(url):
     """
     Descarga un archivo Excel desde una URL (SharePoint u otro servicio).
+    Maneja específicamente errores de autenticación de SharePoint empresarial.
     """
     try:
         headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Accept': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel, application/octet-stream, */*'
         }
         response = requests.get(url, headers=headers, timeout=30, allow_redirects=True)
 
         if response.status_code == 200:
+            content_type = response.headers.get('content-type', '').lower()
+            # Detectar si SharePoint devolvió página de login en lugar del archivo
+            if 'html' in content_type or b'<html' in response.content[:500].lower():
+                st.error("🔒 La URL devolvió una página HTML (probablemente login de SharePoint) en lugar del archivo Excel.")
+                st.markdown("""
+                <div class="alert-box warning">
+                    <strong>Soluciones para SharePoint Empresarial / Cuenta Profesional:</strong><br><br>
+                    1. <strong>Descarga manual:</strong> Baje el archivo desde SharePoint y utilice la opción <em>Archivo Local</em>.<br>
+                    2. <strong>Enlace anónimo:</strong> En SharePoint, genere un enlace de acceso <em>"Cualquiera con el enlace"</em> (requiere permisos de administrador).<br>
+                    3. <strong>Descarga directa:</strong> Al copiar el enlace de SharePoint Online, reemplace <code>?web=1</code> por <code>?download=1</code> al final de la URL.<br>
+                    4. <strong>Microsoft Graph API:</strong> Para integración automática se requiere registro de aplicación en Azure AD con autenticación OAuth2 (fuera del alcance de esta app estándar).<br><br>
+                    <em>Nota: Las cuentas profesionales con MFA/Autenticación moderna no permiten descarga directa sin token de acceso.</em>
+                </div>
+                """, unsafe_allow_html=True)
+                return None
             return BytesIO(response.content)
+        elif response.status_code in [401, 403]:
+            st.error(f"🔒 Acceso denegado (HTTP {response.status_code}). El archivo requiere autenticación.")
+            st.info("Para SharePoint/OneDrive empresarial, use la opción 'Archivo Local' o genere un enlace de acceso anónimo.")
+            return None
         else:
-            st.error(f"Error al descargar: Código HTTP {response.status_code}")
+            st.error(f"❌ Error al descargar: Código HTTP {response.status_code}")
             return None
 
     except requests.exceptions.Timeout:
-        st.error("Tiempo de espera agotado. El archivo es muy grande o la conexión es lenta.")
+        st.error("⏱️ Tiempo de espera agotado. El archivo es muy grande o la conexión es lenta.")
         return None
     except requests.exceptions.ConnectionError:
-        st.error("Error de conexión. Verifique la URL y su conexión a internet.")
+        st.error("🔌 Error de conexión. Verifique la URL y su conexión a internet.")
         return None
     except Exception as e:
-        st.error(f"Error al descargar archivo: {str(e)}")
+        st.error(f"❌ Error al descargar archivo: {str(e)}")
         return None
 
 
@@ -656,28 +736,31 @@ def generar_excel_descarga(df, nombre_hoja='Reporte'):
     return output.getvalue()
 
 
-def calcular_kpi_color(valor, tipo='disponibilidad'):
+def calcular_kpi_color(valor, tipo='disponibilidad', config=None):
     """
-    Determina el color de un KPI basado en umbrales estándar de la industria.
+    Determina el color de un KPI basado en umbrales configurables.
     """
+    if config is None:
+        config = st.session_state.get('config', {})
+
     if tipo == 'disponibilidad':
-        if valor >= 95:
+        if valor >= config.get('umbral_disp_green', 95):
             return 'green'
-        elif valor >= 85:
+        elif valor >= config.get('umbral_disp_yellow', 85):
             return 'yellow'
         else:
             return 'red'
     elif tipo == 'mtbf':
-        if valor >= 8:
+        if valor >= config.get('umbral_mtbf_green', 8):
             return 'green'
-        elif valor >= 4:
+        elif valor >= config.get('umbral_mtbf_yellow', 4):
             return 'yellow'
         else:
             return 'red'
     elif tipo == 'mttr':
-        if valor <= 1:
+        if valor <= config.get('umbral_mttr_green', 1):
             return 'green'
-        elif valor <= 3:
+        elif valor <= config.get('umbral_mttr_yellow', 3):
             return 'yellow'
         else:
             return 'red'
@@ -706,7 +789,7 @@ def formato_numero(valor, decimales=2, sufijo=''):
         return f"{valor:.{decimales}f}{sufijo}"
 
 
-def crear_gauge_chart(valor, titulo, maximo=100, color_primario=None):
+def crear_gauge_chart(valor, titulo, maximo=100, color_primario=None, umbral_linea=85):
     """
     Crea un gráfico gauge (medidor) profesional con Plotly.
     """
@@ -717,8 +800,8 @@ def crear_gauge_chart(valor, titulo, maximo=100, color_primario=None):
         mode="gauge+number+delta",
         value=valor,
         domain={'x': [0, 1], 'y': [0, 1]},
-        title={'text': titulo, 'font': {'size': 18, 'color': '#0f172a', 'family': 'Inter'}},
-        number={'font': {'size': 28, 'color': '#0f172a', 'family': 'Inter'}, 
+        title={'text': titulo, 'font': {'size': 18, 'color': '#0f172a', 'family': 'Inter, sans-serif'}},
+        number={'font': {'size': 28, 'color': '#0f172a', 'family': 'Inter, sans-serif'},
                 'suffix': '%' if maximo == 100 else ''},
         gauge={
             'axis': {'range': [0, maximo], 'tickwidth': 1, 'tickcolor': '#64748b'},
@@ -734,7 +817,7 @@ def crear_gauge_chart(valor, titulo, maximo=100, color_primario=None):
             'threshold': {
                 'line': {'color': COLORES_INSTITUCIONALES['peligro'], 'width': 4},
                 'thickness': 0.8,
-                'value': maximo * 0.85
+                'value': maximo * (umbral_linea / 100.0) if maximo == 100 else umbral_linea
             }
         }
     ))
@@ -744,7 +827,7 @@ def crear_gauge_chart(valor, titulo, maximo=100, color_primario=None):
         margin=dict(l=20, r=20, t=50, b=20),
         paper_bgcolor='rgba(0,0,0,0)',
         plot_bgcolor='rgba(0,0,0,0)',
-        font={'family': 'Inter'}
+        font={'family': 'Inter, sans-serif'}
     )
 
     return fig
@@ -797,7 +880,7 @@ def crear_pareto(df, columna_categoria, columna_valor, titulo, top_n=15, color_b
     fig.add_hline(
         y=80, line_dash="dash", line_color="#dc2626", line_width=2,
         secondary_y=True,
-        annotation_text="Regla 80/20", 
+        annotation_text="Regla 80/20",
         annotation_position="right",
         annotation_font_color="#dc2626"
     )
@@ -805,7 +888,7 @@ def crear_pareto(df, columna_categoria, columna_valor, titulo, top_n=15, color_b
     fig.update_layout(
         title={
             'text': f"<b>{titulo}</b>",
-            'font': {'size': 20, 'color': '#0f172a', 'family': 'Inter'},
+            'font': {'size': 20, 'color': '#0f172a', 'family': 'Inter, sans-serif'},
             'x': 0.5
         },
         xaxis_title="",
@@ -827,7 +910,7 @@ def crear_pareto(df, columna_categoria, columna_valor, titulo, top_n=15, color_b
     )
 
     fig.update_xaxes(
-        tickangle=-35, 
+        tickangle=-35,
         tickfont={'size': 11},
         gridcolor='#f1f5f9'
     )
@@ -914,7 +997,7 @@ def crear_tendencia_temporal(df, agrupacion='D', titulo="Tendencia Temporal"):
     fig.update_layout(
         title={
             'text': f"<b>{titulo}</b>",
-            'font': {'size': 20, 'color': '#0f172a', 'family': 'Inter'},
+            'font': {'size': 20, 'color': '#0f172a', 'family': 'Inter, sans-serif'},
             'x': 0.5
         },
         height=600,
@@ -937,6 +1020,7 @@ def crear_tendencia_temporal(df, agrupacion='D', titulo="Tendencia Temporal"):
 def crear_heatmap_calendario(df, columna_valor='tiempo', titulo="Mapa de Calor - Calendario"):
     """
     Crea un heatmap de calendario mostrando intensidad por día.
+    CORREGIDO: Usa estructura moderna de colorbar compatible con Plotly 5.x+.
     """
     df_cal = df.copy()
     df_cal = df_cal.dropna(subset=['fecha'])
@@ -954,6 +1038,7 @@ def crear_heatmap_calendario(df, columna_valor='tiempo', titulo="Mapa de Calor -
 
     dias_labels = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom']
 
+    # CORRECCIÓN: colorbar title como dict en lugar de titleside (obsoleto)
     fig = go.Figure(data=go.Heatmap(
         z=pivot_pivot.values,
         x=dias_labels[:len(pivot_pivot.columns)],
@@ -966,7 +1051,10 @@ def crear_heatmap_calendario(df, columna_valor='tiempo', titulo="Mapa de Calor -
             [1, '#7f1d1d']
         ],
         hovertemplate='<b>%{y}</b><br>%{x}: %{z:.0f} min<extra></extra>',
-        colorbar=dict(title="Minutos", titleside="right")
+        colorbar=dict(
+            title={"text": "Minutos", "side": "right"},
+            titleside="right"  # fallback para compatibilidad si aplica
+        )
     ))
 
     fig.update_layout(
@@ -1175,7 +1263,7 @@ def crear_treemap(df, path, valores, titulo):
     )
 
     fig.update_traces(
-        textfont={'size': 13, 'family': 'Inter'},
+        textfont={'size': 13, 'family': 'Inter, sans-serif'},
         hovertemplate='<b>%{label}</b><br>Tiempo: %{value:.0f} min<extra></extra>'
     )
 
@@ -1204,7 +1292,7 @@ def crear_sunburst(df, path, valores, titulo):
     )
 
     fig.update_traces(
-        textfont={'size': 12, 'family': 'Inter'},
+        textfont={'size': 12, 'family': 'Inter, sans-serif'},
         hovertemplate='<b>%{label}</b><br>Tiempo: %{value:.0f} min<extra></extra>'
     )
 
@@ -1274,7 +1362,7 @@ def resumen_ejecutivo_texto(df, metricas):
     """
     if df.empty or 'fecha' not in df.columns:
         return """
-        <div style="background: linear-gradient(135deg, #0f4c81 0%, #1e6ba3 100%); 
+        <div style="background: linear-gradient(135deg, #0f4c81 0%, #1e6ba3 100%);
                     padding: 2rem; border-radius: 16px; color: white; margin-bottom: 2rem;">
             <h3 style="color: #f59e0b; margin-bottom: 1rem; font-size: 1.4rem;">📊 RESUMEN EJECUTIVO</h3>
             <p style="font-size: 1.05rem; line-height: 1.8;">
@@ -1283,22 +1371,22 @@ def resumen_ejecutivo_texto(df, metricas):
         </div>
         """
 
-    fecha_inicio = df['fecha'].min().strftime('%d/%m/%Y')
-    fecha_fin = df['fecha'].max().strftime('%d/%m/%Y')
+    fecha_inicio_str = df['fecha'].min().strftime('%d/%m/%Y')
+    fecha_fin_str = df['fecha'].max().strftime('%d/%m/%Y')
 
     resumen = f"""
-    <div style="background: linear-gradient(135deg, #0f4c81 0%, #1e6ba3 100%); 
+    <div style="background: linear-gradient(135deg, #0f4c81 0%, #1e6ba3 100%);
                 padding: 2rem; border-radius: 16px; color: white; margin-bottom: 2rem;">
         <h3 style="color: #fbbf24; margin-bottom: 1rem; font-size: 1.4rem;">📊 RESUMEN EJECUTIVO</h3>
         <p style="font-size: 1.05rem; line-height: 1.8; margin-bottom: 1rem;">
-            Durante el período analizado (<strong>{fecha_inicio} - {fecha_fin}</strong>), 
-            la línea registró <strong>{metricas['total_fallas']} eventos</strong> de parada 
-            con un tiempo total de <strong>{metricas['tiempo_total_paradas']:.0f} minutos 
+            Durante el período analizado (<strong>{fecha_inicio_str} - {fecha_fin_str}</strong>),
+            la línea registró <strong>{metricas['total_fallas']} eventos</strong> de parada
+            con un tiempo total de <strong>{metricas['tiempo_total_paradas']:.0f} minutos
             ({metricas['tiempo_total_paradas']/60:.1f} horas)</strong>.
         </p>
         <p style="font-size: 1.05rem; line-height: 1.8; margin-bottom: 1rem;">
-            La <strong>disponibilidad</strong> de la línea fue del <strong>{metricas['disponibilidad']:.2f}%</strong>, 
-            con un <strong>MTBF de {metricas['mtbf_horas']:.2f} horas</strong> y un 
+            La <strong>disponibilidad</strong> de la línea fue del <strong>{metricas['disponibilidad']:.2f}%</strong>,
+            con un <strong>MTBF de {metricas['mtbf_horas']:.2f} horas</strong> y un
             <strong>MTTR de {metricas['mttr_horas']:.2f} horas</strong>.
         </p>
     """
@@ -1313,7 +1401,8 @@ def resumen_ejecutivo_texto(df, metricas):
             """
             for causa, tiempo in top_causas.items():
                 pct = (tiempo / metricas['tiempo_total_paradas']) * 100 if metricas['tiempo_total_paradas'] > 0 else 0
-                resumen += f"<li><strong>{causa}</strong>: {tiempo:.0f} min ({pct:.1f}% del total)</li>\n"
+                resumen += f"<li><strong>{causa}</strong>: {tiempo:.0f} min ({pct:.1f}% del total)</li>
+"
             resumen += "</ul></div>"
 
     # Top estaciones - solo si existe la columna
@@ -1326,14 +1415,15 @@ def resumen_ejecutivo_texto(df, metricas):
             """
             for est, tiempo in top_estaciones.items():
                 pct = (tiempo / metricas['tiempo_total_paradas']) * 100 if metricas['tiempo_total_paradas'] > 0 else 0
-                resumen += f"<li><strong>{est}</strong>: {tiempo:.0f} min ({pct:.1f}% del total)</li>\n"
+                resumen += f"<li><strong>{est}</strong>: {tiempo:.0f} min ({pct:.1f}% del total)</li>
+"
             resumen += "</ul></div>"
 
     resumen += "</div>"
     return resumen
 
 
-def render_kpi_card(label, valor, delta=None, delta_type="normal", 
+def render_kpi_card(label, valor, delta=None, delta_type="normal",
                     subtext="", color_class="", icon="📊"):
     """
     Renderiza una tarjeta KPI HTML personalizada.
@@ -1359,7 +1449,7 @@ def render_kpi_card(label, valor, delta=None, delta_type="normal",
 
 
 # ==============================================================================
-# INICIALIZACIÓN DE ESTADO DE SESIÓN
+# INICIALIZACIÓN DE ESTADO DE SESIÓN Y CONFIGURACIÓN
 # ==============================================================================
 if 'datos_cargados' not in st.session_state:
     st.session_state.datos_cargados = False
@@ -1369,6 +1459,10 @@ if 'datos_cargados' not in st.session_state:
     st.session_state.metricas = {}
     st.session_state.nombre_archivo = ""
     st.session_state.filtros_aplicados = False
+
+# Inicializar configuración persistente
+if 'config' not in st.session_state:
+    st.session_state.config = init_config()
 
 
 # ==============================================================================
@@ -1390,7 +1484,7 @@ with st.sidebar:
     </div>
     """, unsafe_allow_html=True)
 
-    st.markdown("<h3 style='color: #f59e0b; font-size: 1rem; margin-bottom: 1rem;'>📥 CARGA DE DATOS</h3>", 
+    st.markdown("<h3 style='color: #f59e0b; font-size: 1rem; margin-bottom: 1rem;'>📥 CARGA DE DATOS</h3>",
                 unsafe_allow_html=True)
 
     metodo_carga = st.radio(
@@ -1406,7 +1500,7 @@ with st.sidebar:
         url_input = st.text_input(
             "URL del archivo Excel:",
             placeholder="https://.../Reporte.xlsx",
-            help="Ingrese la URL directa del archivo Excel en SharePoint u otro servicio"
+            help="Ingrese la URL directa del archivo Excel. Para SharePoint empresarial, prefiera 'Archivo Local' o use enlaces anónimos."
         )
 
         if st.button("🚀 CARGAR DESDE URL", use_container_width=True):
@@ -1461,13 +1555,18 @@ with st.sidebar:
                         st.session_state.datos_cargados = True
                         st.session_state.filtros_aplicados = False
 
-                        st.session_state.metricas = calcular_mtbf_mttr_disponibilidad(df_limpio)
+                        cfg = st.session_state.config
+                        st.session_state.metricas = calcular_mtbf_mttr_disponibilidad(
+                            df_limpio,
+                            minutos_turno=cfg['minutos_turno'],
+                            turnos_por_dia=cfg['turnos_dia']
+                        )
 
                         st.success(f"✅ Datos cargados exitosamente: {len(df_limpio)} registros")
 
                         with st.expander("📋 Columnas detectadas"):
                             for estandar, real in columnas_detectadas.items():
-                                st.markdown(f"<span style='color: #16a34a;'>✓</span> <strong>{estandar}</strong>: `{real}`", 
+                                st.markdown(f"<span style='color: #16a34a;'>✓</span> <strong>{estandar}</strong>: `{real}`",
                                           unsafe_allow_html=True)
 
         except Exception as e:
@@ -1478,7 +1577,7 @@ with st.sidebar:
 
     # Filtros dinámicos
     if st.session_state.datos_cargados:
-        st.markdown("<h3 style='color: #f59e0b; font-size: 1rem; margin-bottom: 1rem;'>🔍 FILTROS</h3>", 
+        st.markdown("<h3 style='color: #f59e0b; font-size: 1rem; margin-bottom: 1rem;'>🔍 FILTROS</h3>",
                     unsafe_allow_html=True)
 
         df = st.session_state.df_original
@@ -1514,7 +1613,7 @@ with st.sidebar:
 
             if fecha_inicio and fecha_fin:
                 df_filtrado = df_filtrado[
-                    (df_filtrado['fecha'].dt.date >= fecha_inicio) & 
+                    (df_filtrado['fecha'].dt.date >= fecha_inicio) &
                     (df_filtrado['fecha'].dt.date <= fecha_fin)
                 ]
 
@@ -1522,27 +1621,39 @@ with st.sidebar:
                 df_filtrado = df_filtrado[df_filtrado[col].isin(valores)]
 
             st.session_state.df_filtrado = df_filtrado
-            st.session_state.metricas = calcular_mtbf_mttr_disponibilidad(df_filtrado)
+            cfg = st.session_state.config
+            st.session_state.metricas = calcular_mtbf_mttr_disponibilidad(
+                df_filtrado,
+                minutos_turno=cfg['minutos_turno'],
+                turnos_por_dia=cfg['turnos_dia']
+            )
             st.session_state.filtros_aplicados = True
             st.success(f"✅ Filtros aplicados: {len(df_filtrado)} registros")
             st.rerun()
 
         if st.button("🧹 LIMPIAR FILTROS", use_container_width=True):
             st.session_state.df_filtrado = st.session_state.df_original.copy()
-            st.session_state.metricas = calcular_mtbf_mttr_disponibilidad(st.session_state.df_original)
+            cfg = st.session_state.config
+            st.session_state.metricas = calcular_mtbf_mttr_disponibilidad(
+                st.session_state.df_original,
+                minutos_turno=cfg['minutos_turno'],
+                turnos_por_dia=cfg['turnos_dia']
+            )
             st.session_state.filtros_aplicados = False
             st.rerun()
 
-    # Configuración de parámetros de turno
+    # Configuración de parámetros de turno y gauges
     st.markdown("<hr style='border-color: #334155; margin: 2rem 0;'>", unsafe_allow_html=True)
-    st.markdown("<h3 style='color: #f59e0b; font-size: 1rem; margin-bottom: 1rem;'>⚙️ CONFIGURACIÓN</h3>", 
+    st.markdown("<h3 style='color: #f59e0b; font-size: 1rem; margin-bottom: 1rem;'>⚙️ CONFIGURACIÓN</h3>",
                 unsafe_allow_html=True)
+
+    cfg = st.session_state.config
 
     minutos_turno = st.number_input(
         "Minutos por turno:",
         min_value=1,
         max_value=1440,
-        value=480,
+        value=int(cfg['minutos_turno']),
         help="Duración de un turno en minutos (default: 480 = 8 horas)"
     )
 
@@ -1550,21 +1661,54 @@ with st.sidebar:
         "Turnos por día:",
         min_value=1,
         max_value=3,
-        value=2,
+        value=int(cfg['turnos_dia']),
         help="Cantidad de turnos operativos por día"
     )
 
-    st.session_state.config_turno = {
+    st.markdown("<h4 style='color: #94a3b8; font-size: 0.85rem; margin-top: 1.5rem;'>🎚️ LÍMITES DE MEDIDORES (GAUGES)</h4>",
+                unsafe_allow_html=True)
+
+    gauge_max_mtbf = st.number_input("Máximo gauge MTBF (h):", min_value=1.0, value=float(cfg['gauge_max_mtbf']), step=1.0)
+    gauge_max_mttr = st.number_input("Máximo gauge MTTR (h):", min_value=1.0, value=float(cfg['gauge_max_mttr']), step=1.0)
+
+    st.markdown("<h4 style='color: #94a3b8; font-size: 0.85rem; margin-top: 1rem;'>🚦 UMBRALES DE COLORES</h4>",
+                unsafe_allow_html=True)
+
+    col_u1, col_u2 = st.columns(2)
+    with col_u1:
+        umbral_disp_green = st.number_input("Disp. Verde ≥", min_value=0.0, max_value=100.0, value=float(cfg['umbral_disp_green']), step=1.0)
+        umbral_disp_yellow = st.number_input("Disp. Amarillo ≥", min_value=0.0, max_value=100.0, value=float(cfg['umbral_disp_yellow']), step=1.0)
+    with col_u2:
+        umbral_mtbf_green = st.number_input("MTBF Verde ≥", min_value=0.0, value=float(cfg['umbral_mtbf_green']), step=1.0)
+        umbral_mtbf_yellow = st.number_input("MTBF Amarillo ≥", min_value=0.0, value=float(cfg['umbral_mtbf_yellow']), step=1.0)
+
+    umbral_mttr_green = st.number_input("MTTR Verde ≤", min_value=0.0, value=float(cfg['umbral_mttr_green']), step=0.5)
+    umbral_mttr_yellow = st.number_input("MTTR Amarillo ≤", min_value=0.0, value=float(cfg['umbral_mttr_yellow']), step=0.5)
+
+    # Actualizar config en session state
+    st.session_state.config.update({
         'minutos_turno': minutos_turno,
-        'turnos_dia': turnos_dia
-    }
+        'turnos_dia': turnos_dia,
+        'gauge_max_mtbf': gauge_max_mtbf,
+        'gauge_max_mttr': gauge_max_mttr,
+        'umbral_disp_green': umbral_disp_green,
+        'umbral_disp_yellow': umbral_disp_yellow,
+        'umbral_mtbf_green': umbral_mtbf_green,
+        'umbral_mtbf_yellow': umbral_mtbf_yellow,
+        'umbral_mttr_green': umbral_mttr_green,
+        'umbral_mttr_yellow': umbral_mttr_yellow,
+    })
+
+    if st.button("💾 GUARDAR CONFIGURACIÓN", use_container_width=True):
+        save_config_to_url(st.session_state.config)
+        st.success("✅ Configuración guardada en la URL. Guarde el enlace actual para recuperar estos ajustes en otra sesión.")
+        st.info("🔗 Puede usar el botón 'Compartir' del navegador o copiar la URL actual.")
 
     # Footer sidebar
     st.markdown("""
-    <div style="position: fixed; bottom: 0; left: 0; width: 100%; padding: 1rem; 
-                background: #0f172a; border-top: 1px solid #334155; text-align: center;">
+    <div style="margin-top: 3rem; padding: 1rem; background: #0f172a; border-top: 1px solid #334155; text-align: center;">
         <p style="color: #94a3b8; font-size: 0.75rem; margin: 0;">
-            v3.1.0 | CAVA Especialistas en Robotica y Automatizacion
+            v3.2.0 | CAVA Especialistas en Robotica y Automatizacion
         </p>
         <p style="color: #fbbf24; font-size: 0.7rem; margin: 0.2rem 0 0 0;">
             Roger Huamani
@@ -1595,8 +1739,8 @@ if not st.session_state.datos_cargados:
         <h1 style="font-size: 4rem; margin-bottom: 1rem;">📊</h1>
         <h2 style="color: #0f4c81; font-size: 1.8rem; margin-bottom: 1rem;">Bienvenido al Dashboard de Performance</h2>
         <p style="color: #475569; font-size: 1.1rem; max-width: 600px; margin: 0 auto 2rem auto; line-height: 1.8;">
-            Este sistema permite analizar el performance de líneas de producción mediante 
-            el análisis de paradas, cálculo de disponibilidad, MTBF y MTTR. 
+            Este sistema permite analizar el performance de líneas de producción mediante
+            el análisis de paradas, cálculo de disponibilidad, MTBF y MTTR.
             Cargue un archivo Excel desde SharePoint o localmente para comenzar.
         </p>
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem; max-width: 900px; margin: 0 auto;">
@@ -1641,6 +1785,13 @@ if not st.session_state.datos_cargados:
         - Las fechas en formato serial de Excel se convierten automáticamente
         """)
 
+        st.markdown("""
+        **🔒 Nota sobre SharePoint Empresarial:**
+        Si su archivo está en SharePoint/OneDrive de una cuenta profesional (con autenticación MFA),
+        la descarga directa por URL no es posible por seguridad. Use la opción **Archivo Local** o
+        genere un enlace de acceso anónimo desde SharePoint (requiere permisos de administrador).
+        """)
+
     st.stop()
 
 
@@ -1649,15 +1800,15 @@ if not st.session_state.datos_cargados:
 # ==============================================================================
 df = st.session_state.df_filtrado
 metricas = st.session_state.metricas
+config = st.session_state.config
 
 # Recalcular métricas con configuración actual
-if 'config_turno' in st.session_state:
-    metricas = calcular_mtbf_mttr_disponibilidad(
-        df,
-        minutos_turno=st.session_state.config_turno['minutos_turno'],
-        turnos_por_dia=st.session_state.config_turno['turnos_dia']
-    )
-    st.session_state.metricas = metricas
+metricas = calcular_mtbf_mttr_disponibilidad(
+    df,
+    minutos_turno=config['minutos_turno'],
+    turnos_por_dia=config['turnos_dia']
+)
+st.session_state.metricas = metricas
 
 # Indicador de filtros activos
 if st.session_state.filtros_aplicados:
@@ -1665,7 +1816,7 @@ if st.session_state.filtros_aplicados:
     fecha_max_str = df['fecha'].max().strftime('%d/%m/%Y') if 'fecha' in df.columns and not df.empty else "N/A"
     st.markdown(f"""
     <div class="alert-box info">
-        <strong>🔍 Filtros activos:</strong> Mostrando {len(df)} de {len(st.session_state.df_original)} registros | 
+        <strong>🔍 Filtros activos:</strong> Mostrando {len(df)} de {len(st.session_state.df_original)} registros |
         Período: {fecha_min_str} - {fecha_max_str}
     </div>
     """, unsafe_allow_html=True)
@@ -1673,12 +1824,12 @@ if st.session_state.filtros_aplicados:
 # ==============================================================================
 # SECCIÓN 1: KPIs PRINCIPALES
 # ==============================================================================
-st.markdown("<div class='section-title'><span class='icon'>🎯</span> INDICADORES CLAVE DE PERFORMANCE</div>", 
+st.markdown("<div class='section-title'><span class='icon'>🎯</span> INDICADORES CLAVE DE PERFORMANCE</div>",
             unsafe_allow_html=True)
 
-color_disp = calcular_kpi_color(metricas['disponibilidad'], 'disponibilidad')
-color_mtbf = calcular_kpi_color(metricas['mtbf_horas'], 'mtbf')
-color_mttr = calcular_kpi_color(metricas['mttr_horas'], 'mttr')
+color_disp = calcular_kpi_color(metricas['disponibilidad'], 'disponibilidad', config)
+color_mtbf = calcular_kpi_color(metricas['mtbf_horas'], 'mtbf', config)
+color_mttr = calcular_kpi_color(metricas['mttr_horas'], 'mttr', config)
 
 col1, col2, col3, col4, col5 = st.columns(5)
 
@@ -1688,7 +1839,7 @@ with col1:
         valor=f"{metricas['disponibilidad']:.2f}%",
         color_class=color_disp,
         icon="📈",
-        subtext=f"Objetivo: ≥95% | {metricas['dias_analizados']} días analizados"
+        subtext=f"Objetivo: ≥{config['umbral_disp_green']:.0f}% | {metricas['dias_analizados']} días analizados"
     ), unsafe_allow_html=True)
 
 with col2:
@@ -1733,7 +1884,7 @@ st.markdown("<div class='divider'></div>", unsafe_allow_html=True)
 # ==============================================================================
 # SECCIÓN 2: GAUGES Y VISUALIZACIONES DE MÉTRICAS
 # ==============================================================================
-st.markdown("<div class='section-title'><span class='icon'>🎚️</span> MEDIDORES DE PERFORMANCE</div>", 
+st.markdown("<div class='section-title'><span class='icon'>🎚️</span> MEDIDORES DE PERFORMANCE</div>",
             unsafe_allow_html=True)
 
 col_g1, col_g2, col_g3 = st.columns(3)
@@ -1743,27 +1894,30 @@ with col_g1:
         metricas['disponibilidad'],
         "Disponibilidad (%)",
         maximo=100,
-        color_primario=COLORES_INSTITUCIONALES['exito'] if metricas['disponibilidad'] >= 85 else COLORES_INSTITUCIONALES['acento']
+        color_primario=COLORES_INSTITUCIONALES['exito'] if metricas['disponibilidad'] >= config['umbral_disp_yellow'] else COLORES_INSTITUCIONALES['acento'],
+        umbral_linea=config['umbral_disp_green']
     )
     st.plotly_chart(fig_gauge_disp, use_container_width=True, config={'displayModeBar': False})
 
 with col_g2:
-    max_mtbf = max(12, metricas['mtbf_horas'] * 1.2)
+    max_mtbf = max(config['gauge_max_mtbf'], metricas['mtbf_horas'] * 1.2)
     fig_gauge_mtbf = crear_gauge_chart(
         metricas['mtbf_horas'],
         "MTBF (horas)",
         maximo=max_mtbf,
-        color_primario=COLORES_INSTITUCIONALES['info']
+        color_primario=COLORES_INSTITUCIONALES['info'],
+        umbral_linea=config['umbral_mtbf_green']
     )
     st.plotly_chart(fig_gauge_mtbf, use_container_width=True, config={'displayModeBar': False})
 
 with col_g3:
-    max_mttr = max(5, metricas['mttr_horas'] * 1.2)
+    max_mttr = max(config['gauge_max_mttr'], metricas['mttr_horas'] * 1.2)
     fig_gauge_mttr = crear_gauge_chart(
         metricas['mttr_horas'],
         "MTTR (horas)",
         maximo=max_mttr,
-        color_primario=COLORES_INSTITUCIONALES['peligro'] if metricas['mttr_horas'] > 2 else COLORES_INSTITUCIONALES['exito']
+        color_primario=COLORES_INSTITUCIONALES['peligro'] if metricas['mttr_horas'] > config['umbral_mttr_yellow'] else COLORES_INSTITUCIONALES['exito'],
+        umbral_linea=config['umbral_mttr_yellow']
     )
     st.plotly_chart(fig_gauge_mttr, use_container_width=True, config={'displayModeBar': False})
 
@@ -1772,7 +1926,7 @@ st.markdown("<div class='divider'></div>", unsafe_allow_html=True)
 # ==============================================================================
 # SECCIÓN 3: RESUMEN EJECUTIVO
 # ==============================================================================
-st.markdown("<div class='section-title'><span class='icon'>📋</span> RESUMEN EJECUTIVO PARA GERENCIA</div>", 
+st.markdown("<div class='section-title'><span class='icon'>📋</span> RESUMEN EJECUTIVO PARA GERENCIA</div>",
             unsafe_allow_html=True)
 
 st.markdown(resumen_ejecutivo_texto(df, metricas), unsafe_allow_html=True)
@@ -1782,7 +1936,7 @@ st.markdown("<div class='divider'></div>", unsafe_allow_html=True)
 # ==============================================================================
 # SECCIÓN 4: PARETO Y ANÁLISIS DE PARADAS
 # ==============================================================================
-st.markdown("<div class='section-title'><span class='icon'>📊</span> ANÁLISIS DE PARETO - PRINCIPALES CAUSAS</div>", 
+st.markdown("<div class='section-title'><span class='icon'>📊</span> ANÁLISIS DE PARETO - PRINCIPALES CAUSAS</div>",
             unsafe_allow_html=True)
 
 # Verificar qué columnas están disponibles para Pareto
@@ -1858,7 +2012,7 @@ st.markdown("<div class='divider'></div>", unsafe_allow_html=True)
 # ==============================================================================
 # SECCIÓN 5: TENDENCIAS TEMPORALES
 # ==============================================================================
-st.markdown("<div class='section-title'><span class='icon'>📈</span> TENDENCIAS TEMPORALES</div>", 
+st.markdown("<div class='section-title'><span class='icon'>📈</span> TENDENCIAS TEMPORALES</div>",
             unsafe_allow_html=True)
 
 if 'fecha' in df.columns and not df.empty:
@@ -1877,7 +2031,7 @@ if 'fecha' in df.columns and not df.empty:
         st.plotly_chart(fig_tend_mes, use_container_width=True)
 
     with tab_tendencia[3]:
-        fig_heatmap = crear_heatmap_calendario(df, columna_valor='tiempo', 
+        fig_heatmap = crear_heatmap_calendario(df, columna_valor='tiempo',
                                                titulo="Mapa de Calor - Intensidad de Paradas por Día")
         st.plotly_chart(fig_heatmap, use_container_width=True)
 else:
@@ -1888,14 +2042,14 @@ st.markdown("<div class='divider'></div>", unsafe_allow_html=True)
 # ==============================================================================
 # SECCIÓN 6: ANÁLISIS JERÁRQUICO Y DISTRIBUCIONES
 # ==============================================================================
-st.markdown("<div class='section-title'><span class='icon'>🗂️</span> ANÁLISIS JERÁRQUICO Y DISTRIBUCIONES</div>", 
+st.markdown("<div class='section-title'><span class='icon'>🗂️</span> ANÁLISIS JERÁRQUICO Y DISTRIBUCIONES</div>",
             unsafe_allow_html=True)
 
 col_j1, col_j2 = st.columns(2)
 
 with col_j1:
     if 'estacion' in df.columns and 'sistema' in df.columns:
-        st.markdown("<h4 style='color: #0f4c81; margin-bottom: 1rem;'>Treemap: Jerarquía Estación → Sistema</h4>", 
+        st.markdown("<h4 style='color: #0f4c81; margin-bottom: 1rem;'>Treemap: Jerarquía Estación → Sistema</h4>",
                     unsafe_allow_html=True)
         fig_treemap = crear_treemap(
             df,
@@ -1909,7 +2063,7 @@ with col_j1:
 
 with col_j2:
     if 'causa' in df.columns and 'parte' in df.columns:
-        st.markdown("<h4 style='color: #0f4c81; margin-bottom: 1rem;'>Sunburst: Causa → Parte</h4>", 
+        st.markdown("<h4 style='color: #0f4c81; margin-bottom: 1rem;'>Sunburst: Causa → Parte</h4>",
                     unsafe_allow_html=True)
         fig_sun = crear_sunburst(
             df,
@@ -1921,14 +2075,14 @@ with col_j2:
     else:
         st.info("ℹ️ Se requieren columnas 'causa' y 'parte' para el sunburst.")
 
-st.markdown("<h4 style='color: #0f4c81; margin: 2rem 0 1rem 0;'>Distribución de Tiempos por Categoría</h4>", 
+st.markdown("<h4 style='color: #0f4c81; margin: 2rem 0 1rem 0;'>Distribución de Tiempos por Categoría</h4>",
             unsafe_allow_html=True)
 
 col_b1, col_b2 = st.columns(2)
 
 with col_b1:
     if 'causa' in df.columns:
-        fig_box_causa = crear_analisis_caja(df, 'causa', 'tiempo', 
+        fig_box_causa = crear_analisis_caja(df, 'causa', 'tiempo',
                                             "Distribución de Tiempos por Causa")
         st.plotly_chart(fig_box_causa, use_container_width=True)
     else:
@@ -1947,7 +2101,7 @@ st.markdown("<div class='divider'></div>", unsafe_allow_html=True)
 # ==============================================================================
 # SECCIÓN 7: ANÁLISIS CRUZADO Y COMPARATIVOS
 # ==============================================================================
-st.markdown("<div class='section-title'><span class='icon'>🔀</span> ANÁLISIS CRUZADO</div>", 
+st.markdown("<div class='section-title'><span class='icon'>🔀</span> ANÁLISIS CRUZADO</div>",
             unsafe_allow_html=True)
 
 tab_cruzado = st.tabs(["📊 Barras Apiladas", "📈 Dispersión", "📉 Comparativo Temporal"])
@@ -2020,7 +2174,7 @@ st.markdown("<div class='divider'></div>", unsafe_allow_html=True)
 # SECCIÓN 8: ANÁLISIS DE TEXTO (NLP BÁSICO)
 # ==============================================================================
 if 'problema' in df.columns or 'trabajo' in df.columns:
-    st.markdown("<div class='section-title'><span class='icon'>📝</span> ANÁLISIS DE DESCRIPCIONES</div>", 
+    st.markdown("<div class='section-title'><span class='icon'>📝</span> ANÁLISIS DE DESCRIPCIONES</div>",
                 unsafe_allow_html=True)
 
     tab_texto_disponibles = []
@@ -2069,7 +2223,7 @@ if 'problema' in df.columns or 'trabajo' in df.columns:
 # ==============================================================================
 # SECCIÓN 9: TABLA DE DATOS CRUDA Y EXPORTACIÓN
 # ==============================================================================
-st.markdown("<div class='section-title'><span class='icon'>📑</span> DATOS DETALLADOS Y EXPORTACIÓN</div>", 
+st.markdown("<div class='section-title'><span class='icon'>📑</span> DATOS DETALLADOS Y EXPORTACIÓN</div>",
             unsafe_allow_html=True)
 
 with st.expander("📋 Ver tabla completa de datos", expanded=False):
@@ -2124,24 +2278,24 @@ st.markdown("<div class='divider'></div>", unsafe_allow_html=True)
 # ==============================================================================
 # SECCIÓN 10: INFORME AUTOMÁTICO Y RECOMENDACIONES
 # ==============================================================================
-st.markdown("<div class='section-title'><span class='icon'>💡</span> INFORME AUTOMÁTICO Y RECOMENDACIONES</div>", 
+st.markdown("<div class='section-title'><span class='icon'>💡</span> INFORME AUTOMÁTICO Y RECOMENDACIONES</div>",
             unsafe_allow_html=True)
 
 recomendaciones = []
 
-if metricas['disponibilidad'] < 85:
+if metricas['disponibilidad'] < config['umbral_disp_yellow']:
     recomendaciones.append({
         'tipo': 'crítico',
         'icono': '🔴',
         'titulo': 'Disponibilidad Crítica',
-        'mensaje': f"La disponibilidad actual es del {metricas['disponibilidad']:.1f}%, muy por debajo del objetivo del 95%. Se requiere acción inmediata."
+        'mensaje': f"La disponibilidad actual es del {metricas['disponibilidad']:.1f}%, muy por debajo del objetivo del {config['umbral_disp_green']:.0f}%. Se requiere acción inmediata."
     })
-elif metricas['disponibilidad'] < 95:
+elif metricas['disponibilidad'] < config['umbral_disp_green']:
     recomendaciones.append({
         'tipo': 'advertencia',
         'icono': '🟡',
         'titulo': 'Disponibilidad por Debajo del Objetivo',
-        'mensaje': f"La disponibilidad es del {metricas['disponibilidad']:.1f}%. Se recomienda planificar acciones de mejora para alcanzar el 95%."
+        'mensaje': f"La disponibilidad es del {metricas['disponibilidad']:.1f}%. Se recomienda planificar acciones de mejora para alcanzar el {config['umbral_disp_green']:.0f}%."
     })
 else:
     recomendaciones.append({
@@ -2151,14 +2305,14 @@ else:
         'mensaje': f"Excelente disponibilidad del {metricas['disponibilidad']:.1f}%. Mantener las prácticas actuales."
     })
 
-if metricas['mtbf_horas'] < 4:
+if metricas['mtbf_horas'] < config['umbral_mtbf_yellow']:
     recomendaciones.append({
         'tipo': 'crítico',
         'icono': '🔴',
         'titulo': 'MTBF Muy Bajo',
         'mensaje': f"El MTBF es de solo {metricas['mtbf_horas']:.1f} horas. Las fallas son demasiado frecuentes. Priorizar análisis de causa raíz."
     })
-elif metricas['mtbf_horas'] < 8:
+elif metricas['mtbf_horas'] < config['umbral_mtbf_green']:
     recomendaciones.append({
         'tipo': 'advertencia',
         'icono': '🟡',
@@ -2166,14 +2320,14 @@ elif metricas['mtbf_horas'] < 8:
         'mensaje': f"MTBF de {metricas['mtbf_horas']:.1f} horas. Se recomienda implementar mantenimiento predictivo."
     })
 
-if metricas['mttr_horas'] > 3:
+if metricas['mttr_horas'] > config['umbral_mttr_yellow']:
     recomendaciones.append({
         'tipo': 'crítico',
         'icono': '🔴',
         'titulo': 'MTTR Elevado',
         'mensaje': f"El tiempo promedio de reparación es de {metricas['mttr_horas']:.1f} horas. Revisar procedimientos de mantenimiento y disponibilidad de repuestos."
     })
-elif metricas['mttr_horas'] > 1:
+elif metricas['mttr_horas'] > config['umbral_mttr_green']:
     recomendaciones.append({
         'tipo': 'advertencia',
         'icono': '🟡',
@@ -2222,9 +2376,9 @@ for rec in recomendaciones:
 st.markdown("""
 <div class="footer">
     <p><strong>🏭 CAVA Especialistas en Robotica y Automatizacion</strong></p>
-    <p>Dashboard Performance de Línea v3.1.0 | Desarrollado por Roger Huamani</p>
+    <p>Dashboard Performance de Línea v3.2.0 | Desarrollado por Roger Huamani</p>
     <p style="margin-top: 0.5rem; font-size: 0.75rem;">
-        © 2026 | Compatible con SharePoint y archivos Excel estándar | 
+        © 2026 | Compatible con SharePoint y archivos Excel estándar |
         Métricas calculadas según estándares SMRP e ISO 14224
     </p>
 </div>
