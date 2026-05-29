@@ -1053,8 +1053,7 @@ def crear_heatmap_calendario(df, columna_valor='tiempo', titulo="Mapa de Calor -
         ],
         hovertemplate='<b>%{y}</b><br>%{x}: %{z:.0f} min<extra></extra>',
         colorbar=dict(
-            title={"text": "Minutos", "side": "right"},
-            titleside="right"  # fallback para compatibilidad si aplica
+            title={"text": "Minutos", "side": "right"}
         )
     ))
 
