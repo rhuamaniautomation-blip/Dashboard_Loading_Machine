@@ -1402,8 +1402,7 @@ def resumen_ejecutivo_texto(df, metricas):
             """
             for causa, tiempo in top_causas.items():
                 pct = (tiempo / metricas['tiempo_total_paradas']) * 100 if metricas['tiempo_total_paradas'] > 0 else 0
-                resumen += f"<li><strong>{causa}</strong>: {tiempo:.0f} min ({pct:.1f}% del total)</li>
-"
+                resumen += f"<li><strong>{causa}</strong>: {tiempo:.0f} min ({pct:.1f}% del total)</li>\n"
             resumen += "</ul></div>"
 
     # Top estaciones - solo si existe la columna
@@ -1416,8 +1415,7 @@ def resumen_ejecutivo_texto(df, metricas):
             """
             for est, tiempo in top_estaciones.items():
                 pct = (tiempo / metricas['tiempo_total_paradas']) * 100 if metricas['tiempo_total_paradas'] > 0 else 0
-                resumen += f"<li><strong>{est}</strong>: {tiempo:.0f} min ({pct:.1f}% del total)</li>
-"
+                resumen += f"<li><strong>{est}</strong>: {tiempo:.0f} min ({pct:.1f}% del total)</li>\n"
             resumen += "</ul></div>"
 
     resumen += "</div>"
