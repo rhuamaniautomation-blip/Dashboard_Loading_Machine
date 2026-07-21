@@ -687,6 +687,8 @@ def limpiar_dataframe(df, columnas_map):
     # Limpiar columnas categóricas
     for col in ['turno', 'maquina', 'estacion', 'sistema', 'parte', 'causa']:
         if col in df_limpio.columns:
+            # CORRECCIÓN: Manejar NaN reales antes de convertir a string
+            df_limpio[col] = df_limpio[col].fillna('No Especificado')
             df_limpio[col] = df_limpio[col].astype(str).str.strip()
             df_limpio[col] = df_limpio[col].replace(['nan', 'None', '', 'NaN'], 'No Especificado')
 
@@ -1646,7 +1648,11 @@ with st.sidebar:
         filtros = {}
         for col in ['turno', 'maquina', 'estacion', 'sistema', 'parte', 'causa']:
             if col in df.columns:
-                opciones = ['Todos'] + sorted(df[col].unique().tolist())
+                # CORRECCIÓN: Filtrar NaN y valores vacíos antes de sorted()
+                valores_unicos = df[col].dropna().unique().tolist()
+                valores_unicos = [str(x).strip() for x in valores_unicos 
+                                  if str(x).strip() not in ['', 'nan', 'None', 'NaN']]
+                opciones = ['Todos'] + sorted(valores_unicos)
                 seleccion = st.multiselect(
                     f"{col.upper()}:",
                     options=opciones,
