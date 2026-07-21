@@ -48,7 +48,7 @@ st.set_page_config(
     menu_items={
         'Get Help': None,
         'Report a bug': None,
-        'About': "Dashboard Performance de Línea v3.2.0 - Desarrollado por CAVA Especialistas en Robotica y Automatizacion - Roger Huamani"
+        'About': "Dashboard Performance de Línea v3.3.0 - Desarrollado por CAVA Especialistas en Robotica y Automatizacion - Roger Huamani"
     }
 )
 
@@ -78,7 +78,7 @@ st.markdown("""
     /* MARCA DE AGUA INSTITUCIONAL                                       */
     /* ================================================================ */
     body::before {
-        content: "CAVA ESPECIALISTAS EN ROBOTICA Y AUTOMATIZACION\aROGER HUAMANI - DASHBOARD v3.2.0";
+        content: "CAVA ESPECIALISTAS EN ROBOTICA Y AUTOMATIZACION\aROGER HUAMANI - DASHBOARD v3.3.0";
         position: fixed;
         top: 50%;
         left: 50%;
@@ -516,36 +516,67 @@ DIAS_ES = {0: 'Lunes', 1: 'Martes', 2: 'Miércoles', 3: 'Jueves',
 # CONFIGURACIÓN PERSISTENTE MEDIANTE QUERY PARAMS
 # ==============================================================================
 def init_config():
-    """Inicializa configuración desde query params (URL) o valores por defecto."""
-    qp = st.query_params
+    """Inicializa configuración desde query params (URL) o valores por defecto.
+    CORREGIDO: Compatible con Streamlit 2026 - st.query_params API."""
+    # CORRECCIÓN: st.query_params no tiene método .get() con default en versiones nuevas
+    # Usamos to_dict() para obtener un diccionario plano y luego .get()
+    try:
+        qp = st.query_params.to_dict()
+    except Exception:
+        qp = {}
+
+    def _get_float(key, default):
+        val = qp.get(key)
+        if val is None:
+            return default
+        try:
+            return float(val)
+        except (ValueError, TypeError):
+            return default
+
+    def _get_int(key, default):
+        val = qp.get(key)
+        if val is None:
+            return default
+        try:
+            return int(float(val))
+        except (ValueError, TypeError):
+            return default
+
     config = {
-        'minutos_turno': int(qp.get('mt', 480)),
-        'turnos_dia': int(qp.get('td', 2)),
-        'gauge_max_mtbf': float(qp.get('gmm', 12)),
-        'gauge_max_mttr': float(qp.get('gmtrm', 5)),
-        'umbral_disp_green': float(qp.get('udg', 95)),
-        'umbral_disp_yellow': float(qp.get('udy', 85)),
-        'umbral_mtbf_green': float(qp.get('umg', 8)),
-        'umbral_mtbf_yellow': float(qp.get('umy', 4)),
-        'umbral_mttr_green': float(qp.get('utg', 1)),
-        'umbral_mttr_yellow': float(qp.get('uty', 3)),
+        'minutos_turno': _get_int('mt', 480),
+        'turnos_dia': _get_int('td', 2),
+        'gauge_max_mtbf': _get_float('gmm', 12),
+        'gauge_max_mttr': _get_float('gmtrm', 5),
+        'umbral_disp_green': _get_float('udg', 95),
+        'umbral_disp_yellow': _get_float('udy', 85),
+        'umbral_mtbf_green': _get_float('umg', 8),
+        'umbral_mtbf_yellow': _get_float('umy', 4),
+        'umbral_mttr_green': _get_float('utg', 1),
+        'umbral_mttr_yellow': _get_float('uty', 3),
     }
     return config
 
 
 def save_config_to_url(config):
-    """Guarda la configuración actual en los query params de la URL."""
-    qp = st.query_params
-    qp['mt'] = str(int(config['minutos_turno']))
-    qp['td'] = str(int(config['turnos_dia']))
-    qp['gmm'] = str(float(config['gauge_max_mtbf']))
-    qp['gmtrm'] = str(float(config['gauge_max_mttr']))
-    qp['udg'] = str(float(config['umbral_disp_green']))
-    qp['udy'] = str(float(config['umbral_disp_yellow']))
-    qp['umg'] = str(float(config['umbral_mtbf_green']))
-    qp['umy'] = str(float(config['umbral_mtbf_yellow']))
-    qp['utg'] = str(float(config['umbral_mttr_green']))
-    qp['uty'] = str(float(config['umbral_mttr_yellow']))
+    """Guarda la configuración actual en los query params de la URL.
+    CORREGIDO: Usa from_dict() para actualizar múltiples params de forma atómica."""
+    params = {
+        'mt': str(int(config['minutos_turno'])),
+        'td': str(int(config['turnos_dia'])),
+        'gmm': str(float(config['gauge_max_mtbf'])),
+        'gmtrm': str(float(config['gauge_max_mttr'])),
+        'udg': str(float(config['umbral_disp_green'])),
+        'udy': str(float(config['umbral_disp_yellow'])),
+        'umg': str(float(config['umbral_mtbf_green'])),
+        'umy': str(float(config['umbral_mtbf_yellow'])),
+        'utg': str(float(config['umbral_mttr_green'])),
+        'uty': str(float(config['umbral_mttr_yellow'])),
+    }
+    try:
+        st.query_params.from_dict(params)
+    except Exception as e:
+        st.error(f"Error al guardar configuración en URL: {str(e)}")
 
 
 # ==============================================================================
@@ -574,20 +605,33 @@ def detectar_columnas(df):
 def convertir_fecha_excel(valor):
     """
     Convierte valores de fecha de Excel (números seriales) a datetime.
+    CORREGIDO: Maneja mejor fechas mixtas (números, strings, datetime).
     """
     if pd.isna(valor):
         return pd.NaT
 
+    # Si ya es datetime o Timestamp, devolverlo directamente
+    if isinstance(valor, (pd.Timestamp, datetime)):
+        return valor
+
     if isinstance(valor, (int, float)):
         try:
-            return pd.Timestamp('1899-12-30') + pd.Timedelta(days=int(valor))
+            # Fecha serial de Excel (número de días desde 1899-12-30)
+            if valor > 30000:  # Evitar fechas inválidas pequeñas
+                return pd.Timestamp('1899-12-30') + pd.Timedelta(days=int(valor))
+            else:
+                return pd.NaT
         except:
             return pd.NaT
 
     if isinstance(valor, str):
+        valor = valor.strip()
+        if not valor:
+            return pd.NaT
         formatos = [
             '%Y-%m-%d', '%d/%m/%Y', '%d-%m-%Y', '%m/%d/%Y',
-            '%d/%m/%y', '%Y/%m/%d', '%d.%m.%Y', '%Y%m%d'
+            '%d/%m/%y', '%Y/%m/%d', '%d.%m.%Y', '%Y%m%d',
+            '%d/%m/%Y %H:%M:%S', '%Y-%m-%d %H:%M:%S'
         ]
         for fmt in formatos:
             try:
@@ -608,13 +652,15 @@ def convertir_fecha_excel(valor):
 def limpiar_dataframe(df, columnas_map):
     """
     Limpia y estandariza el DataFrame para análisis.
+    CORREGIDO: Mejor manejo de encabezados duplicados y fechas.
     """
     df_limpio = df.copy()
 
     # Eliminar filas que parecen ser encabezados repetidos
     if len(df_limpio) > 0:
         primera_fila = df_limpio.iloc[0].astype(str).str.strip().str.lower()
-        if any(primera_fila.isin(['fecha', 'turno', 'aviso', 'tiempo'])):
+        encabezados_comunes = ['fecha', 'turno', 'aviso', 'tiempo', 'maquina', 'estación', 'estacion', 'sistema']
+        if any(primera_fila.isin(encabezados_comunes)):
             df_limpio = df_limpio.iloc[1:].reset_index(drop=True)
 
     # Renombrar columnas a nombres estándar
@@ -624,7 +670,11 @@ def limpiar_dataframe(df, columnas_map):
     # Procesar columna de fecha
     if 'fecha' in df_limpio.columns:
         df_limpio['fecha'] = df_limpio['fecha'].apply(convertir_fecha_excel)
+        filas_antes = len(df_limpio)
         df_limpio = df_limpio.dropna(subset=['fecha'])
+        filas_despues = len(df_limpio)
+        if filas_despues < filas_antes:
+            st.warning(f"⚠️ Se eliminaron {filas_antes - filas_despues} filas con fechas inválidas.")
         df_limpio['fecha'] = pd.to_datetime(df_limpio['fecha'], errors='coerce')
         df_limpio = df_limpio.dropna(subset=['fecha'])
 
@@ -638,13 +688,13 @@ def limpiar_dataframe(df, columnas_map):
     for col in ['turno', 'maquina', 'estacion', 'sistema', 'parte', 'causa']:
         if col in df_limpio.columns:
             df_limpio[col] = df_limpio[col].astype(str).str.strip()
-            df_limpio[col] = df_limpio[col].replace(['nan', 'None', ''], 'No Especificado')
+            df_limpio[col] = df_limpio[col].replace(['nan', 'None', '', 'NaN'], 'No Especificado')
 
     # Limpiar textos largos
     for col in ['problema', 'trabajo']:
         if col in df_limpio.columns:
             df_limpio[col] = df_limpio[col].astype(str).str.strip()
-            df_limpio[col] = df_limpio[col].replace(['nan', 'None'], '')
+            df_limpio[col] = df_limpio[col].replace(['nan', 'None', 'NaN'], '')
 
     # Crear columnas derivadas de fecha
     if 'fecha' in df_limpio.columns:
@@ -1706,7 +1756,7 @@ with st.sidebar:
     st.markdown("""
     <div style="margin-top: 3rem; padding: 1rem; background: #0f172a; border-top: 1px solid #334155; text-align: center;">
         <p style="color: #94a3b8; font-size: 0.75rem; margin: 0;">
-            v3.2.0 | CAVA Especialistas en Robotica y Automatizacion
+            v3.3.0 | CAVA Especialistas en Robotica y Automatizacion
         </p>
         <p style="color: #fbbf24; font-size: 0.7rem; margin: 0.2rem 0 0 0;">
             Roger Huamani
@@ -1895,7 +1945,7 @@ with col_g1:
         color_primario=COLORES_INSTITUCIONALES['exito'] if metricas['disponibilidad'] >= config['umbral_disp_yellow'] else COLORES_INSTITUCIONALES['acento'],
         umbral_linea=config['umbral_disp_green']
     )
-    st.plotly_chart(fig_gauge_disp, use_container_width=True, config={'displayModeBar': False})
+    st.plotly_chart(fig_gauge_disp, use_container_width=True)
 
 with col_g2:
     max_mtbf = max(config['gauge_max_mtbf'], metricas['mtbf_horas'] * 1.2)
@@ -1906,7 +1956,7 @@ with col_g2:
         color_primario=COLORES_INSTITUCIONALES['info'],
         umbral_linea=config['umbral_mtbf_green']
     )
-    st.plotly_chart(fig_gauge_mtbf, use_container_width=True, config={'displayModeBar': False})
+    st.plotly_chart(fig_gauge_mtbf, use_container_width=True)
 
 with col_g3:
     max_mttr = max(config['gauge_max_mttr'], metricas['mttr_horas'] * 1.2)
@@ -1917,7 +1967,7 @@ with col_g3:
         color_primario=COLORES_INSTITUCIONALES['peligro'] if metricas['mttr_horas'] > config['umbral_mttr_yellow'] else COLORES_INSTITUCIONALES['exito'],
         umbral_linea=config['umbral_mttr_yellow']
     )
-    st.plotly_chart(fig_gauge_mttr, use_container_width=True, config={'displayModeBar': False})
+    st.plotly_chart(fig_gauge_mttr, use_container_width=True)
 
 st.markdown("<div class='divider'></div>", unsafe_allow_html=True)
 
@@ -2374,7 +2424,7 @@ for rec in recomendaciones:
 st.markdown("""
 <div class="footer">
     <p><strong>🏭 CAVA Especialistas en Robotica y Automatizacion</strong></p>
-    <p>Dashboard Performance de Línea v3.2.0 | Desarrollado por Roger Huamani</p>
+    <p>Dashboard Performance de Línea v3.3.0 | Desarrollado por Roger Huamani</p>
     <p style="margin-top: 0.5rem; font-size: 0.75rem;">
         © 2026 | Compatible con SharePoint y archivos Excel estándar |
         Métricas calculadas según estándares SMRP e ISO 14224
